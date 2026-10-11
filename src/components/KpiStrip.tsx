@@ -2,8 +2,7 @@ import { assumptionsHold, type Analytical } from '../engine/analytical'
 import type { Metrics } from '../engine/metrics'
 import type { SimConfig } from '../engine/types'
 import { channelColors } from '../theme'
-import { Card } from './Card'
-import { CheckIcon, GaugeIcon } from './icons'
+import { CheckIcon } from './icons'
 import { formatValue } from './useCanvas'
 
 /** Splits a formatted reading so the number and the unit can be styled apart. */
@@ -94,39 +93,5 @@ export function KpiStrip({
         </span>
       </div>
     </div>
-  )
-}
-
-export function MetricsPanel({ metrics, config }: { metrics: Metrics; config: SimConfig }) {
-  const finite = (value: number) => (Number.isFinite(value) ? formatValue(value) : '∞')
-  const rows: Array<[string, string, string]> = [
-    ['RMS output voltage', 'V_rms', formatValue(metrics.vrms, 'V')],
-    ['RMS load current', 'I_rms', formatValue(metrics.irms, 'A')],
-    ['Apparent input power', 'S', formatValue(metrics.sIn, 'VA')],
-    ['Displacement factor', 'cos φ₁', formatValue(metrics.displacementFactor)],
-    ['Ripple factor', 'RF', finite(metrics.rippleFactor)],
-    ['Form factor', 'FF', finite(metrics.formFactor)],
-    ['AC ripple on the output', 'v_ripple', `${formatValue(metrics.vripple, 'V')} rms`],
-    ['Supply current', 'I_s', `${formatValue(metrics.isRms, 'A')} rms`],
-    ['Supply distortion', 'THD_i', `${formatValue(metrics.thd * 100)} %`],
-    [
-      'Peak inverse voltage',
-      'PIV',
-      `${formatValue(metrics.piv, 'V')} · ${formatValue(metrics.piv / (config.Vrms * Math.SQRT2))} V_m`,
-    ],
-  ]
-  return (
-    <Card icon={<GaugeIcon />} title="Detailed measurements" subtitle="Computed from one steady-state cycle">
-      <dl className="metric-list">
-        {rows.map(([label, symbol, value]) => (
-          <div key={symbol} className="metric-row">
-            <dt>
-              {label} <span className="metric-symbol">{symbol}</span>
-            </dt>
-            <dd className="mono">{value}</dd>
-          </div>
-        ))}
-      </dl>
-    </Card>
   )
 }

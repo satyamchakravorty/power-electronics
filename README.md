@@ -2,10 +2,15 @@
 
 An interactive simulator for single-phase and three-phase rectifiers. Pick a topology, choose
 diodes or thyristors, set the firing angle and the load, and watch the conduction path light up on
-the schematic while the waveforms, harmonics and performance figures update with it.
+the schematic while the oscilloscope and the headline figures update with it.
 
-Every number on screen comes from a time-domain simulation, and the theory panel puts the textbook
-closed-form result next to it so the two can be compared directly.
+The firing angle and the playback cursor sit directly under the schematic and the oscilloscope, so
+either can be dragged while both views are in sight. The keyboard drives them too: Space plays or
+pauses, ← and → step the cursor, ↑ and ↓ change α (hold Shift for 10° steps), and 1–5 pick a
+converter.
+
+Every number on screen comes from a time-domain simulation, and the mean output voltage is shown
+next to the textbook closed-form result wherever that formula's assumptions hold.
 
 ## Topologies
 

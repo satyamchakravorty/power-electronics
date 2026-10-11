@@ -66,33 +66,6 @@ export const CircuitIcon = () => (
   </Icon>
 )
 
-export const SpectrumIcon = () => (
-  <Icon>
-    <path d="M5 20V8M10 20V4M15 20v-9M20 20v-5" />
-  </Icon>
-)
-
-export const BookIcon = () => (
-  <Icon>
-    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z" />
-    <path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5" />
-  </Icon>
-)
-
-export const ChipIcon = () => (
-  <Icon>
-    <rect x="6" y="6" width="12" height="12" rx="2" />
-    <path d="M9 2v4M15 2v4M9 18v4M15 18v4M2 9h4M2 15h4M18 9h4M18 15h4" />
-  </Icon>
-)
-
-export const GaugeIcon = () => (
-  <Icon>
-    <path d="M4 18a8 8 0 1 1 16 0" />
-    <path d="M12 18l4-6" />
-  </Icon>
-)
-
 export const SlidersIcon = () => (
   <Icon>
     <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0" />

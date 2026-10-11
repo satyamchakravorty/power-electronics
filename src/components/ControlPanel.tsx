@@ -5,13 +5,10 @@ import { useSimStore } from '../state/useSimStore'
 import { Card } from './Card'
 import { SlidersIcon } from './icons'
 
-const ALPHA_PRESETS = [0, 30, 45, 60, 90, 120, 150]
-
 export function ControlPanel() {
   const config = useSimStore((s) => s.config)
   const setConfig = useSimStore((s) => s.setConfig)
   const topology = TOPOLOGIES[config.topology]
-  const uncontrolled = config.deviceMode === 'diode'
 
   return (
     <Card icon={<SlidersIcon />} title="Controls" subtitle={topology.name} className="controls">
@@ -33,35 +30,6 @@ export function ControlPanel() {
                 onClick={() => setConfig({ deviceMode: mode })}
               >
                 {DEVICE_MODE_LABELS[mode]}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className={`field${uncontrolled ? ' is-disabled' : ''}`}>
-          <div className="field-head">
-            <label htmlFor="alpha">Firing angle α</label>
-            <span className="field-value">{uncontrolled ? 'diodes' : `${config.alphaDeg}°`}</span>
-          </div>
-          <Range
-            id="alpha"
-            min={0}
-            max={180}
-            step={1}
-            disabled={uncontrolled}
-            value={config.alphaDeg}
-            onChange={(alphaDeg) => setConfig({ alphaDeg })}
-          />
-          <div className="seg seg-fill seg-small">
-            {ALPHA_PRESETS.map((value) => (
-              <button
-                key={value}
-                type="button"
-                disabled={uncontrolled}
-                aria-pressed={!uncontrolled && config.alphaDeg === value}
-                onClick={() => setConfig({ alphaDeg: value })}
-              >
-                {value}°
               </button>
             ))}
           </div>

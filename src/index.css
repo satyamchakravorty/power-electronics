@@ -18,8 +18,6 @@
   --warn: #fbbf24;
   --danger: #f87171;
   --good: #34d399;
-  --warn-text: #fde68a;
-  --info-text: #bae6fd;
   --dcm-text: #fdba74;
   --ccm-text: #6ee7b7;
 
@@ -83,8 +81,6 @@
   --warn: #b45309;
   --danger: #dc2626;
   --good: #059669;
-  --warn-text: #92400e;
-  --info-text: #075985;
   --dcm-text: #c2410c;
   --ccm-text: #047857;
 
@@ -289,24 +285,8 @@ a {
   flex-direction: column;
   gap: var(--gap);
   min-width: 0;
+  min-height: calc(100vh - var(--header) - var(--gap) - 32px);
   container-type: inline-size;
-}
-
-.grid-2 {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--gap);
-}
-
-.chart-body {
-  flex: 1;
-  display: flex;
-}
-
-@container (min-width: 980px) {
-  .grid-2 {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  }
 }
 
 @media (max-width: 960px) {
@@ -661,15 +641,10 @@ a {
 /* ---------------------------------------------------------------- stage */
 
 .stage {
+  flex: 1;
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: var(--gap);
-}
-
-@container (min-width: 1180px) {
-  .stage {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr);
-  }
+  gap: 12px var(--gap);
 }
 
 .schematic-frame {
@@ -681,6 +656,41 @@ a {
   border-radius: 10px;
   border: 1px solid var(--border);
   background: var(--sch-paper);
+}
+
+/* Side by side the stage fills the window, and the drawing scales to whatever
+   height the oscilloscope leaves it rather than setting the row height. */
+@container (min-width: 1180px) {
+  .stage {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.08fr);
+    grid-template-rows: minmax(0, 1fr) auto auto;
+  }
+  .stage-schematic {
+    grid-area: 1 / 1;
+  }
+  .stage-scope {
+    grid-area: 1 / 2;
+  }
+  .transport-alpha {
+    grid-area: 2 / 1;
+  }
+  .transport-play {
+    grid-area: 2 / 2;
+  }
+  .transport-keys {
+    grid-area: 3 / 1 / 4 / -1;
+  }
+  .schematic-frame {
+    position: relative;
+    min-height: 300px;
+  }
+  .schematic-frame .schematic {
+    position: absolute;
+    inset: 8px;
+    width: calc(100% - 16px);
+    height: calc(100% - 16px);
+    max-height: none;
+  }
 }
 
 /* Below this the labels become unreadable, so the drawing scrolls instead. */
@@ -714,21 +724,25 @@ a {
 }
 
 .transport {
-  grid-column: 1 / -1;
   display: flex;
   align-items: center;
   gap: 14px;
   flex-wrap: wrap;
-  padding: 10px 16px 10px 10px;
+  min-height: 62px;
+  padding: 10px 14px 10px 10px;
   border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--card-bg);
   box-shadow: var(--shadow);
 }
 
+.transport-alpha {
+  padding-left: 16px;
+}
+
 .transport .range {
   flex: 1;
-  min-width: 160px;
+  min-width: 140px;
 }
 
 .play-button {
@@ -756,32 +770,67 @@ a {
     0 8px 22px -8px rgba(56, 189, 248, 0.9);
 }
 
-.transport-angle {
+.transport-readout {
   display: flex;
   flex-direction: column;
   line-height: 1.1;
   min-width: 52px;
 }
 
-.transport-angle .mono {
+.transport-readout .mono {
   font-size: 18px;
   font-weight: 650;
   white-space: pre;
+}
+
+.transport-alpha .transport-readout .mono {
+  color: var(--accent);
+}
+
+.transport-alpha.is-disabled .transport-readout .mono {
+  color: var(--faint);
 }
 
 .transport-label {
   font-size: 10.5px;
   color: var(--muted);
   font-style: italic;
+  white-space: nowrap;
 }
 
-.transport-note {
+.transport-keys {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 18px;
   font-size: 11.5px;
   color: var(--faint);
 }
 
-@container (max-width: 760px) {
-  .transport-note {
+.transport-keys > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+kbd {
+  min-width: 20px;
+  padding: 1px 5px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1.5;
+  text-align: center;
+  color: var(--text-soft);
+  border-radius: 5px;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  background: var(--panel);
+}
+
+/* Shortcuts mean nothing without a keyboard. */
+@media (hover: none) {
+  .transport-keys {
     display: none;
   }
 }
@@ -1167,48 +1216,16 @@ a {
   touch-action: none;
 }
 
-.harmonics {
-  flex: 1;
-  min-height: 220px;
-  width: 100%;
-}
-
 /* Out of flow, so the backing store size can never feed back into the box the
    resize observer measures. Otherwise a stretchy parent grows without bound. */
-.scope,
-.harmonics {
+.scope {
   position: relative;
 }
 
-.scope canvas,
-.harmonics canvas {
+.scope canvas {
   position: absolute;
   inset: 0;
   display: block;
-}
-
-.stat {
-  display: inline-flex;
-  align-items: baseline;
-  gap: 7px;
-  padding: 4px 10px;
-  border-radius: 8px;
-  background: rgba(251, 191, 36, 0.1);
-  border: 1px solid rgba(251, 191, 36, 0.3);
-}
-
-.stat-label {
-  font-size: 10.5px;
-  font-weight: 650;
-  letter-spacing: 0.06em;
-  color: var(--warn-text);
-}
-
-.stat-value {
-  font-family: var(--mono);
-  font-size: 14px;
-  font-weight: 650;
-  color: var(--warn);
 }
 
 /* ---------------------------------------------------------------- schematic */
@@ -1264,206 +1281,6 @@ a {
 .schematic .device-clickable:focus-visible .device-hit {
   stroke: var(--accent);
   stroke-width: 1.5;
-}
-
-/* ---------------------------------------------------------------- metrics */
-
-.metric-list {
-  margin: 0;
-  padding: 0 16px 10px;
-}
-
-.metric-row {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 7px 0;
-  border-bottom: 1px dashed var(--border);
-}
-
-.metric-row:last-child {
-  border-bottom: 0;
-}
-
-.metric-row dt {
-  font-size: 12.5px;
-  color: var(--text-soft);
-}
-
-.metric-symbol {
-  font-family: var(--mono);
-  font-size: 11px;
-  color: var(--faint);
-  margin-left: 4px;
-}
-
-.metric-row dd {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-
-/* ---------------------------------------------------------------- tables */
-
-table.data {
-  width: calc(100% - 32px);
-  margin: 0 16px 8px;
-  border-collapse: collapse;
-  font-size: 12.5px;
-}
-
-table.data th,
-table.data td {
-  text-align: right;
-  padding: 8px 6px;
-  border-bottom: 1px solid var(--border);
-}
-
-table.data th {
-  color: var(--faint);
-  font-weight: 600;
-  font-size: 10.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-}
-
-table.data td:first-child,
-table.data th:first-child {
-  text-align: left;
-  font-weight: 650;
-  padding-left: 0;
-}
-
-table.data th:last-child,
-table.data td:last-child {
-  padding-right: 0;
-}
-
-table.data tbody tr:last-child td {
-  border-bottom: 0;
-}
-
-table.data tbody tr:hover td {
-  background: var(--hover-tint);
-}
-
-table.data td.num {
-  font-family: var(--mono);
-  font-variant-numeric: tabular-nums;
-}
-
-.conduction {
-  display: inline-block;
-  vertical-align: middle;
-  width: 54px;
-  height: 5px;
-  margin-right: 9px;
-  border-radius: 5px;
-  background: var(--grid-strong);
-  overflow: hidden;
-}
-
-.conduction-bar {
-  display: block;
-  height: 100%;
-  border-radius: inherit;
-  background: var(--good);
-}
-
-/* ---------------------------------------------------------------- theory */
-
-.theory-regime {
-  font-size: 11.5px;
-  font-weight: 560;
-  padding: 3px 10px;
-  border-radius: 20px;
-  color: var(--accent);
-  background: var(--accent-soft);
-  border: 1px solid rgba(56, 189, 248, 0.28);
-}
-
-.prose {
-  font-size: 13px;
-  color: var(--text-soft);
-  line-height: 1.6;
-}
-
-.theory-formula {
-  margin: 14px 0;
-  padding: 16px 12px;
-  overflow-x: auto;
-  text-align: center;
-  font-size: 18px;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background:
-    linear-gradient(180deg, rgba(56, 189, 248, 0.05), transparent),
-    var(--screen);
-}
-
-.theory-compare {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  overflow: hidden;
-}
-
-.theory-compare > div {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 10px 12px;
-}
-
-.theory-compare > div + div {
-  border-left: 1px solid var(--border);
-}
-
-.compare-label {
-  font-size: 11px;
-  color: var(--muted);
-}
-
-.compare-value {
-  font-family: var(--mono);
-  font-size: 16px;
-  font-weight: 650;
-}
-
-.compare-value.is-good {
-  color: var(--good);
-}
-
-.compare-value.is-muted {
-  color: var(--faint);
-}
-
-.callout {
-  margin-top: 12px;
-  padding: 10px 12px;
-  font-size: 12.5px;
-  line-height: 1.55;
-  border-radius: 10px;
-  border: 1px solid;
-}
-
-.callout-warn {
-  background: rgba(251, 191, 36, 0.08);
-  border-color: rgba(251, 191, 36, 0.3);
-  color: var(--warn-text);
-}
-
-.callout-info {
-  background: rgba(56, 189, 248, 0.07);
-  border-color: rgba(56, 189, 248, 0.25);
-  color: var(--info-text);
-}
-
-.callout b {
-  color: inherit;
 }
 
 /* ---------------------------------------------------------------- footer */

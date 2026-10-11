@@ -1,35 +1,22 @@
 import { useMemo } from 'react'
 import { Card } from './components/Card'
-import { ControlPanel, Range } from './components/ControlPanel'
-import { DeviceTable } from './components/DeviceTable'
-import { HarmonicsChart } from './components/HarmonicsChart'
-import {
-  CircuitIcon,
-  LogoMark,
-  MoonIcon,
-  PauseIcon,
-  PlayIcon,
-  ScopeIcon,
-  SpectrumIcon,
-  SunIcon,
-} from './components/icons'
-import { KpiStrip, MetricsPanel } from './components/MetricsPanel'
+import { ControlPanel } from './components/ControlPanel'
+import { CircuitIcon, LogoMark, MoonIcon, ScopeIcon, SunIcon } from './components/icons'
+import { KpiStrip } from './components/KpiStrip'
 import { Schematic } from './components/schematic'
 import { Scope } from './components/Scope'
-import { TheoryPanel } from './components/TheoryPanel'
 import { TopologyTabs } from './components/TopologyTabs'
+import { AlphaBar, PlaybackBar, ShortcutHints } from './components/Transport'
 import { formatValue } from './components/useCanvas'
 import { analytical } from './engine/analytical'
 import { channelsFor, type Channel } from './engine/channels'
 import { computeMetrics } from './engine/metrics'
-import { SAMPLES_PER_CYCLE, simulate } from './engine/solver'
+import { simulate } from './engine/solver'
 import { useSimStore } from './state/useSimStore'
 import { usePlayback } from './state/usePlayback'
+import { useShortcuts } from './state/useShortcuts'
 import { useTheme } from './state/useTheme'
 import { channelPalette } from './theme'
-
-/** Supply cycles per second of wall clock. */
-const SPEEDS = [0.1, 0.25, 0.5, 1, 2]
 
 export default function App() {
   const config = useSimStore((s) => s.config)
@@ -37,10 +24,6 @@ export default function App() {
   const toggleDevice = useSimStore((s) => s.toggleDevice)
   const playhead = useSimStore((s) => s.playhead)
   const setPlayhead = useSimStore((s) => s.setPlayhead)
-  const playing = useSimStore((s) => s.playing)
-  const setPlaying = useSimStore((s) => s.setPlaying)
-  const speed = useSimStore((s) => s.speed)
-  const setSpeed = useSimStore((s) => s.setSpeed)
   const scopeMode = useSimStore((s) => s.scopeMode)
   const setScopeMode = useSimStore((s) => s.setScopeMode)
   const visibleChannels = useSimStore((s) => s.visibleChannels)
@@ -54,13 +37,12 @@ export default function App() {
   const toggleTheme = useTheme((s) => s.toggle)
 
   usePlayback()
+  useShortcuts()
 
   const trace = useMemo(() => simulate(config), [config])
   const metrics = useMemo(() => computeMetrics(trace), [trace])
   const channels = useMemo(() => channelsFor(trace, channelPalette(themeMode)), [trace, themeMode])
   const theory = useMemo(() => analytical(config), [config])
-
-  const angle = (playhead / SAMPLES_PER_CYCLE) * 360
 
   return (
     <div className="app">
@@ -119,6 +101,8 @@ export default function App() {
                 />
               </div>
             </Card>
+
+            <AlphaBar />
 
             <Card
               icon={<ScopeIcon />}
@@ -187,69 +171,8 @@ export default function App() {
               </div>
             </Card>
 
-            <div className="transport">
-              <button
-                className="play-button"
-                type="button"
-                aria-label={playing ? 'Pause' : 'Play'}
-                onClick={() => setPlaying(!playing)}
-              >
-                {playing ? <PauseIcon /> : <PlayIcon />}
-              </button>
-              <div className="transport-angle">
-                <span className="transport-label">ωt</span>
-                <span className="mono">{angle.toFixed(0).padStart(3, ' ')}°</span>
-              </div>
-              <Range
-                min={0}
-                max={SAMPLES_PER_CYCLE - 1}
-                step={1}
-                value={playhead}
-                label="Angle through the supply cycle"
-                onChange={setPlayhead}
-              />
-              <div className="seg seg-small" title="Supply cycles per second of real time">
-                {SPEEDS.map((value) => (
-                  <button
-                    key={value}
-                    type="button"
-                    aria-pressed={speed === value}
-                    onClick={() => setSpeed(value)}
-                  >
-                    {value}×
-                  </button>
-                ))}
-              </div>
-              <span className="transport-note">
-                At 1× one cycle takes a second instead of {(1000 / config.f).toFixed(0)} ms
-              </span>
-            </div>
-          </div>
-
-          <div className="grid-2">
-            <Card
-              icon={<SpectrumIcon />}
-              title="Supply current harmonics"
-              subtitle={`Relative to the fundamental · ${Math.round(metrics.rippleFrequency / config.f)}-pulse converter`}
-              actions={
-                <span className="stat">
-                  <span className="stat-label">THD</span>
-                  <span className="stat-value">{formatValue(metrics.thd * 100)}%</span>
-                </span>
-              }
-              footer="An ideal p-pulse bridge draws harmonics only at orders p·k ± 1. The single-phase bridge therefore carries every odd harmonic, while the six-pulse bridge cancels the 3rd and 9th and is left with the 5th, 7th, 11th, 13th and so on."
-            >
-              <div className="card-body chart-body">
-                <HarmonicsChart spectrum={metrics.sourceSpectrum} />
-              </div>
-            </Card>
-
-            <TheoryPanel theory={theory} metrics={metrics} title={trace.topology.name} />
-          </div>
-
-          <div className="grid-2">
-            <MetricsPanel metrics={metrics} config={config} />
-            <DeviceTable metrics={metrics} topology={trace.topology} config={config} />
+            <PlaybackBar />
+            <ShortcutHints />
           </div>
 
           <footer className="app-footer">
