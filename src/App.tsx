@@ -50,8 +50,8 @@ export default function App() {
         <div className="brand">
           <LogoMark />
           <div>
-            <h1>Rectifier Lab</h1>
-            <span className="tagline">Interactive power electronics converter simulator</span>
+            <h1>Power Electronics Simulator</h1>
+            <span className="tagline">Interactive rectifiers and phase-controlled converters</span>
           </div>
         </div>
         <div className="header-spacer" />

@@ -1,4 +1,4 @@
-# Rectifier Lab
+# Power Electronics Simulator
 
 An interactive simulator for single-phase and three-phase rectifiers. Pick a topology, choose
 diodes or thyristors, set the firing angle and the load, and watch the conduction path light up on
