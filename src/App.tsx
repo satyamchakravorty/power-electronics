@@ -174,15 +174,6 @@ export default function App() {
             <PlaybackBar />
             <ShortcutHints />
           </div>
-
-          <footer className="app-footer">
-            <p>
-              The solver integrates the load equation with fourth-order Runge–Kutta and finds the
-              periodic steady state by shooting, so start-up transients never pollute a reading.
-              Its results are checked against the closed-form expressions and against the worked
-              examples of D. W. Hart, <i>Power Electronics</i>, chapters 3 and 4.
-            </p>
-          </footer>
         </main>
       </div>
     </div>
