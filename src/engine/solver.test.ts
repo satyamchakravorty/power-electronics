@@ -97,8 +97,8 @@ describe('back-EMF load', () => {
   const pulsed: Array<Partial<SimConfig>> = [
     { topology: '1ph-bridge', alphaDeg: 90, E: 50 },
     { topology: '1ph-bridge', alphaDeg: 75, E: 100 },
-    { topology: '3ph-half-wave', alphaDeg: 60, E: 200 },
-    { topology: '3ph-half-wave', deviceMode: 'diode', E: 300 },
+    { topology: '3ph-bridge', alphaDeg: 30, E: 500 },
+    { topology: '3ph-bridge', deviceMode: 'diode', E: 550 },
     { topology: '3ph-bridge', deviceMode: 'semi', alphaDeg: 150, E: 50 },
   ]
   for (const overrides of pulsed) {
@@ -155,11 +155,6 @@ describe('uncontrolled rectifier reference values', () => {
     const { metrics } = run({ topology: '1ph-bridge', deviceMode: 'diode', ...RES })
     expect(metrics.vdc).toBeCloseTo((2 * Vm) / Math.PI, 1)
     expect(metrics.vrms).toBeCloseTo(Vm / Math.SQRT2, 1)
-  })
-
-  it('three-phase half-wave averages 1.17 times phase RMS', () => {
-    const { metrics } = run({ topology: '3ph-half-wave', deviceMode: 'diode', ...RES })
-    expect(metrics.vdc).toBeCloseTo(1.17 * 230, 0)
   })
 
   it('three-phase bridge averages 1.35 times line RMS', () => {
@@ -348,14 +343,9 @@ describe('device stress', () => {
 
 describe('edge cases', () => {
   it('closed form goes to zero once no supply voltage is positive at the firing instant', () => {
-    for (const [topology, alphaDeg] of [
-      ['3ph-half-wave', 170],
-      ['3ph-bridge', 150],
-    ] as const) {
-      const { metrics, theory } = run({ topology, alphaDeg, ...RES })
-      expect(theory.vdc).toBe(0)
-      expect(metrics.vdc).toBeCloseTo(0, 6)
-    }
+    const { metrics, theory } = run({ topology: '3ph-bridge', alphaDeg: 150, ...RES })
+    expect(theory.vdc).toBe(0)
+    expect(metrics.vdc).toBeCloseTo(0, 6)
   })
 
   it('fires every phase identically, so the output has exact pulse symmetry', () => {

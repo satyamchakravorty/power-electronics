@@ -6,7 +6,7 @@ the schematic while the oscilloscope and the headline figures update with it.
 
 The firing angle and the playback cursor sit directly under the schematic and the oscilloscope, so
 either can be dragged while both views are in sight. The keyboard drives them too: Space plays or
-pauses, ← and → step the cursor, ↑ and ↓ change α (hold Shift for 10° steps), and 1–5 pick a
+pauses, ← and → step the cursor, ↑ and ↓ change α (hold Shift for 10° steps), and 1–3 pick a
 converter.
 
 Every number on screen comes from a time-domain simulation, and the mean output voltage is shown
@@ -18,7 +18,6 @@ next to the textbook closed-form result wherever that formula's assumptions hold
 | --- | --- | --- | --- |
 | Single-phase half-wave | 1 | 1 | – |
 | Single-phase full bridge | 2 | 4 | yes |
-| Three-phase half-wave | 3 | 3 | – |
 | Three-phase full bridge | 6 | 6 | yes |
 
 Each can run as an uncontrolled (diode) rectifier, a fully controlled converter, or — for the
@@ -37,8 +36,8 @@ most negative — where a diode is always available and a thyristor only once it
 has latched. Gate signals are pulse trains, so a thyristor gated before it is forward-biased (α
 below Hart's $\alpha_{min}$ against a back-EMF) fires the moment the supply rises past E. In the
 single-phase converters the train ends with the device's positive half-cycle, the range Hart's α
-refers to; the three-phase converters hold it for the full conduction span, which the six-pulse
-bridge needs to re-gate each thyristor when its partner in the next pair fires. The load current
+refers to; the six-pulse bridge holds it for the full conduction span, which it needs to re-gate
+each thyristor when its partner in the next pair fires. The load current
 then follows from integrating
 
 $$L \frac{di}{dt} = v_o - iR - E$$
@@ -61,7 +60,7 @@ avoids constraining the sample count to a power of two.
 
 ### Validation
 
-The suite in `src/engine/solver.test.ts` holds the solver to 242 tests, covering:
+The suite in `src/engine/solver.test.ts` holds the solver to 193 tests, covering:
 
 - agreement with the closed-form $V_{dc}$ for every topology across firing angles and load regimes,
   skipping the comparisons where the formula's own continuous-conduction assumption does not hold
@@ -80,8 +79,7 @@ They reproduce the worked examples from the book's own circuit values: half-wave
 thyristor rectifiers, the freewheeling diode, single-phase bridges in continuous and discontinuous
 conduction, an RL-source load, single- and three-phase inverter operation, and the six-pulse
 bridge's supply-current harmonics and diode reverse voltage. Each one checks extinction angles,
-average and RMS currents, power and power factor to within 1%. The three-phase half-wave rectifier
-is not in Hart; it is checked against the standard closed form instead.
+average and RMS currents, power and power factor to within 1%.
 
 Example 3-11 prints $I_o = 2.19$ A, which contradicts the example's own extinction angle: the
 inductor averages zero volts, so $I_o = V_m(\cos\alpha - \cos\beta)/2\pi R = 2.04$ A, and

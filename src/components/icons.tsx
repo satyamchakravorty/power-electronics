@@ -127,8 +127,6 @@ function rectified(topology: TopologyId, theta: number): number {
       return Math.max(0, phase(0))
     case '1ph-bridge':
       return Math.abs(phase(0))
-    case '3ph-half-wave':
-      return Math.max(0, phase(0), phase(third), phase(-third))
     case '3ph-bridge': {
       const values = [phase(0), phase(third), phase(-third)]
       return (Math.max(...values) - Math.min(...values)) / Math.sqrt(3)

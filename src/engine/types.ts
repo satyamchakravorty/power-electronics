@@ -1,7 +1,6 @@
 export type TopologyId =
   | '1ph-half-wave'
   | '1ph-bridge'
-  | '3ph-half-wave'
   | '3ph-bridge'
 
 /** Which devices in a topology are gate-controlled. */
@@ -44,9 +43,8 @@ export interface Topology {
    * refers to; held any longer, a negative back-EMF would let the thyristor
    * re-fire early in the next cycle and every α would act like zero.
    * 'delayed' holds it for a full gateWindow after firing, because a
-   * three-phase thyristor may be fired past the end of its natural interval
-   * and, in the six-pulse bridge, must be re-gated when its partner in the
-   * next pair fires.
+   * six-pulse bridge thyristor may be fired past the end of its natural
+   * interval and must be re-gated when its partner in the next pair fires.
    */
   gateEnd: 'interval' | 'delayed'
   /** Number of distinct source nodes, counting the neutral. */

@@ -28,7 +28,6 @@ export function writeSourceVoltages(
       out[0] = v
       out[1] = 0
       break
-    case '3ph-half-wave':
     case '3ph-bridge':
       out[0] = v
       out[1] = Vm * Math.sin(theta - (2 * Math.PI) / 3)
@@ -93,26 +92,6 @@ export const TOPOLOGIES: Record<TopologyId, Topology> = {
     ],
   },
 
-  '3ph-half-wave': {
-    id: '3ph-half-wave',
-    name: 'Three-Phase Half-Wave (3-Pulse)',
-    shortName: '3Φ Half-Wave',
-    phases: 3,
-    pulses: 3,
-    sourceNodes: 4,
-    returnNode: 3,
-    commonReturn: true,
-    supportsFWD: true,
-    supportsSemi: false,
-    gateWindow: (2 * Math.PI) / 3,
-    gateEnd: 'delayed',
-    devices: [
-      dev('T1', 'upper', 0, 30 * DEG, +1),
-      dev('T2', 'upper', 1, 150 * DEG, 0),
-      dev('T3', 'upper', 2, 270 * DEG, 0),
-    ],
-  },
-
   '3ph-bridge': {
     id: '3ph-bridge',
     name: 'Three-Phase Full Bridge (6-Pulse)',
@@ -141,7 +120,6 @@ export const TOPOLOGIES: Record<TopologyId, Topology> = {
 export const TOPOLOGY_ORDER: TopologyId[] = [
   '1ph-half-wave',
   '1ph-bridge',
-  '3ph-half-wave',
   '3ph-bridge',
 ]
 

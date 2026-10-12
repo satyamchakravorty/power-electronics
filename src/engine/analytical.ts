@@ -105,18 +105,6 @@ export function analytical(config: SimConfig): Analytical {
       return continuous((2 * Vm * Math.cos(a)) / Math.PI)
     }
 
-    case '3ph-half-wave': {
-      const dcmBoundary = 30 * DEG
-      if ((!inductive(config) || clamped) && a > dcmBoundary) {
-        // Past 150 degrees no phase is positive when its pulse arrives.
-        return gapped(
-          a + dcmBoundary >= Math.PI ? 0 : (3 * Vm * (1 + Math.cos(a + dcmBoundary))) / (2 * Math.PI),
-          'Discontinuous conduction',
-        )
-      }
-      return continuous((3 * Math.sqrt(3) * Vm * Math.cos(a)) / (2 * Math.PI))
-    }
-
     case '3ph-bridge': {
       const VmLL = Math.sqrt(3) * Vm
       if (semi) {

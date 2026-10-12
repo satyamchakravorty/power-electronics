@@ -19,7 +19,6 @@ const LOADS: SimConfig['load'][] = ['R', 'RL', 'RLE']
 const SOURCE_ANCHORS: Record<string, string[]> = {
   '1ph-half-wave': ['vs'],
   '1ph-bridge': ['vs'],
-  '3ph-half-wave': ['va', 'vb', 'vc'],
   '3ph-bridge': ['va', 'vb', 'vc'],
 }
 

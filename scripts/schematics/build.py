@@ -280,32 +280,6 @@ def supply3(f: Figure, hops_for=None) -> None:
     f.dot((0, PHASE_Y[1]))
 
 
-def three_half(load: str, fwd: bool):
-    f = Figure()
-    top, bot = 0, -7.5
-    supply3(f)
-    f.wire('w-n', (0, PHASE_Y[2]), (0, bot))
-    f.dot((0, PHASE_Y[2]))
-    f.text((-0.45, PHASE_Y[1]), 'N')
-    ids = ('T1', 'T2', 'T3')
-    for k, (p, y, x) in enumerate(zip(PHASES, PHASE_Y, LEGS)):
-        if k > 0:
-            f.wire(f'w-{p}-u', (x, y), (x, PHASE_Y[0]))
-        f.device(ids[k], (x, PHASE_Y[0]), (x, top), loc='bottom')
-    f.wire('w-top-ab', (LEGS[0], top), (LEGS[1], top))
-    f.wire('w-top-bc', (LEGS[1], top), (LEGS[2], top))
-    f.dot((LEGS[1], top))
-    f.dot((LEGS[2], top))
-    f.output(LEGS[2], 0, 13.6, top, bot, load, fwd, outlet_x=LEGS[2])
-    star = {0: ['w-star-ab', 'w-star-bc'], 1: ['w-star-bc'], 2: []}
-    rail = {0: ['w-top-ab', 'w-top-bc'], 1: ['w-top-bc'], 2: []}
-    flows = {'fw': FREEWHEEL_WIRES}
-    for k, p in enumerate(PHASES):
-        up = [f'w-{p}-u'] if k > 0 else []
-        flows[ids[k]] = [f's-{p}', f'w-{p}', *up, *rail[k], *LOAD_WIRES, 'w-n', *star[k]]
-    return f, flows
-
-
 def three_bridge(load: str, fwd: bool):
     f = Figure()
     top, bot = 0, -7.5
@@ -354,7 +328,6 @@ def three_bridge(load: str, fwd: bool):
 TOPOLOGIES = {
     '1ph-half-wave': half_wave,
     '1ph-bridge': bridge,
-    '3ph-half-wave': three_half,
     '3ph-bridge': three_bridge,
 }
 
