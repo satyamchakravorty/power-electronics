@@ -57,16 +57,6 @@ export function channelsFor(trace: Trace, colors: ChannelPalette = channelColors
         kind: 'voltage',
       },
     )
-  } else if (topology.id === '1ph-centre-tap') {
-    list.push({
-      id: 'vsB',
-      label: 'v_s2',
-      title: 'Secondary voltage, lower half winding',
-      unit: 'V',
-      color: colors.vsB,
-      data: vSource[1],
-      kind: 'voltage',
-    })
   }
 
   list.push(

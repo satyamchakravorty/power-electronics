@@ -43,6 +43,14 @@ describe('analytical agreement', () => {
         name: `${topology} freewheeling alpha=${alphaDeg}`,
         overrides: { topology, deviceMode: 'thyristor', alphaDeg, fwd: true, ...CCM },
       })
+      // A back-EMF leaves every expression intact for as long as the current
+      // stays continuous, which a low resistance keeps it doing here.
+      for (const [E, fwd] of [[60, false], [-150, false], [60, true]] as const) {
+        cases.push({
+          name: `${topology} back-EMF E=${E}${fwd ? ' freewheeling' : ''} alpha=${alphaDeg}`,
+          overrides: { topology, deviceMode: 'thyristor', alphaDeg, fwd, load: 'RLE', R: 2, L: 500, E },
+        })
+      }
       if (TOPOLOGIES[topology].supportsSemi) {
         cases.push({
           name: `${topology} semi alpha=${alphaDeg}`,
@@ -82,6 +90,58 @@ describe('power balance', () => {
   }
 })
 
+describe('back-EMF load', () => {
+  // A stiff inductor against a back-EMF carries short pulses of current that
+  // die out well inside each cycle, where the steady-state search has to cope
+  // with a cycle map that is flat rather than following the R-L decay.
+  const pulsed: Array<Partial<SimConfig>> = [
+    { topology: '1ph-bridge', alphaDeg: 90, E: 50 },
+    { topology: '1ph-bridge', alphaDeg: 75, E: 100 },
+    { topology: '3ph-half-wave', alphaDeg: 60, E: 200 },
+    { topology: '3ph-half-wave', deviceMode: 'diode', E: 300 },
+    { topology: '3ph-bridge', deviceMode: 'semi', alphaDeg: 150, E: 50 },
+  ]
+  for (const overrides of pulsed) {
+    it(`${overrides.topology} ${overrides.deviceMode ?? 'thyristor'} alpha=${overrides.alphaDeg ?? 0} E=${overrides.E} settles in discontinuous conduction`, () => {
+      const { metrics, config } = run({ ...overrides, load: 'RLE', R: 0.5, L: 1000 })
+      expect(metrics.discontinuous).toBe(true)
+      expect(Math.abs(metrics.vdc - (metrics.idc * config.R + config.E))).toBeLessThan(0.05)
+    })
+  }
+
+  it('lets a lone thyristor freewheel after its gate pulse has ended', () => {
+    // The current outlives the half-cycle the gate pulse covers, so only the
+    // freewheeling diode can carry it on. Cutting it off there leaves the mean
+    // voltage untouched but drops the mean current to a quarter.
+    const { metrics } = run({ topology: '1ph-half-wave', alphaDeg: 0, fwd: true, ...CCM })
+    expect(metrics.discontinuous).toBe(false)
+    expect(metrics.idc).toBeCloseTo(metrics.vdc / CCM.R, 1)
+  })
+
+  it('fires a single-phase thyristor only inside its own positive half-cycle', () => {
+    // A negative back-EMF forward-biases the thyristor from -18 degrees, so a
+    // gate pulse held past 180 degrees would fire it there and every alpha
+    // would behave like zero.
+    const trace = simulate(cfg({ topology: '1ph-half-wave', alphaDeg: 150, load: 'RLE', R: 10, L: 10, E: -100 }))
+    const at = (deg: number) => trace.io[Math.round((deg / 360) * trace.io.length)]
+    expect(at(145)).toBe(0)
+    expect(at(155)).toBeGreaterThan(0)
+  })
+
+  it('keeps the continuous-conduction formula exact while the current is continuous', () => {
+    const { metrics, theory } = run({ topology: '1ph-bridge', alphaDeg: 30, load: 'RLE', R: 2, L: 500, E: 100 })
+    expect(metrics.discontinuous).toBe(false)
+    expect(assumptionsHold(theory, metrics.discontinuous)).toBe(true)
+    expect(Math.abs(metrics.vdc / (theory.vdc as number) - 1)).toBeLessThan(0.005)
+  })
+
+  it('lifts the mean above the formula once a positive EMF breaks conduction up', () => {
+    const { metrics, theory } = run({ topology: '1ph-bridge', alphaDeg: 90, load: 'RLE', R: 0.5, L: 1000, E: 50 })
+    expect(assumptionsHold(theory, metrics.discontinuous)).toBe(false)
+    expect(metrics.vdc).toBeGreaterThan((theory.vdc as number) + 40)
+  })
+})
+
 describe('uncontrolled rectifier reference values', () => {
   const Vm = 230 * Math.SQRT2
 
@@ -95,12 +155,6 @@ describe('uncontrolled rectifier reference values', () => {
     const { metrics } = run({ topology: '1ph-bridge', deviceMode: 'diode', ...RES })
     expect(metrics.vdc).toBeCloseTo((2 * Vm) / Math.PI, 1)
     expect(metrics.vrms).toBeCloseTo(Vm / Math.SQRT2, 1)
-  })
-
-  it('centre-tapped full-wave matches the bridge', () => {
-    const bridge = run({ topology: '1ph-bridge', deviceMode: 'diode', ...RES })
-    const centreTap = run({ topology: '1ph-centre-tap', deviceMode: 'diode', ...RES })
-    expect(centreTap.metrics.vdc).toBeCloseTo(bridge.metrics.vdc, 1)
   })
 
   it('three-phase half-wave averages 1.17 times phase RMS', () => {
@@ -274,12 +328,10 @@ describe('device stress', () => {
     for (const span of spans) expect(span).toBeCloseTo(120, 0)
   })
 
-  it('peak inverse voltage is Vm for a bridge and 2Vm for a centre tap', () => {
+  it('peak inverse voltage is Vm for a bridge', () => {
     const Vm = 230 * Math.SQRT2
     const bridge = run({ topology: '1ph-bridge', deviceMode: 'diode', ...RES })
-    const centreTap = run({ topology: '1ph-centre-tap', deviceMode: 'diode', ...RES })
     expect(bridge.metrics.piv).toBeCloseTo(Vm, 0)
-    expect(centreTap.metrics.piv).toBeCloseTo(2 * Vm, 0)
   })
 
   it('device currents sum to the load current', () => {

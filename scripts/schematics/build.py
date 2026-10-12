@@ -234,34 +234,6 @@ def half_wave(load: str, fwd: bool):
     return f, flows
 
 
-def centre_tap(load: str, fwd: bool):
-    f = Figure()
-    top, bot = 0, -7
-    wx, tx = 1.6, 0
-    a1, ct, a2 = -1.5, -3.5, -5.5
-    leg1, leg2 = 3.6, 5.6
-    f.source('s-1', (wx, ct), (wx, a1), '$v_{s1}$', 'bottom')
-    f.source('s-2', (wx, ct), (wx, a2), '$v_{s2}$', 'bottom')
-    f.anchor('vs1', (wx + 0.62, -3.0), 'start', width=1.8)
-    f.anchor('vs2', (wx + 0.62, -5.0), 'start', width=1.8)
-    f.wire('w-ct', (wx, ct), (tx, ct), (tx, bot))
-    f.dot((wx, ct))
-    f.text(((tx + wx) / 2, ct + 0.42), 'CT')
-    f.wire('w-a1', (wx, a1), (leg1, a1))
-    f.wire('w-a2', (wx, a2), (leg2, a2), (leg2, a1))
-    f.device('T1', (leg1, a1), (leg1, top), loc='bottom')
-    f.device('T2', (leg2, a1), (leg2, top), loc='bottom')
-    f.wire('w-top-12', (leg1, top), (leg2, top))
-    f.dot((leg2, top))
-    f.output(leg2, tx, 10.9, top, bot, load, fwd, outlet_x=leg2)
-    flows = {
-        'T1': ['s-1', 'w-a1', 'w-top-12', *LOAD_WIRES, 'w-ct'],
-        'T2': ['s-2', 'w-a2', *LOAD_WIRES, 'w-ct'],
-        'fw': FREEWHEEL_WIRES,
-    }
-    return f, flows
-
-
 def bridge(load: str, fwd: bool):
     f = Figure()
     top, bot, mid = 0, -6, -3
@@ -381,7 +353,6 @@ def three_bridge(load: str, fwd: bool):
 
 TOPOLOGIES = {
     '1ph-half-wave': half_wave,
-    '1ph-centre-tap': centre_tap,
     '1ph-bridge': bridge,
     '3ph-half-wave': three_half,
     '3ph-bridge': three_bridge,

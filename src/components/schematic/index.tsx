@@ -146,8 +146,6 @@ export function Schematic(props: SchematicProps) {
       {svg && <g className="sch-figure" dangerouslySetInnerHTML={{ __html: svg }} />}
 
       <Readout at={a.vs} value={source(0)} />
-      <Readout at={a.vs1} value={source(0)} />
-      <Readout at={a.vs2} value={source(1)} />
       <Readout at={a.va} value={source(0)} />
       <Readout at={a.vb} value={source(1)} />
       <Readout at={a.vc} value={source(2)} />

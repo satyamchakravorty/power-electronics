@@ -4,7 +4,6 @@ import { TopologyGlyph } from './icons'
 
 const TAB_TEXT: Record<TopologyId, { name: string; detail: string }> = {
   '1ph-half-wave': { name: 'Half-wave', detail: '1-phase · 1-pulse' },
-  '1ph-centre-tap': { name: 'Centre-tap', detail: '1-phase · 2-pulse' },
   '1ph-bridge': { name: 'Full bridge', detail: '1-phase · 2-pulse' },
   '3ph-half-wave': { name: 'Half-wave', detail: '3-phase · 3-pulse' },
   '3ph-bridge': { name: 'Full bridge', detail: '3-phase · 6-pulse' },

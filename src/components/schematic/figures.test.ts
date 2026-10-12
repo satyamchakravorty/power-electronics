@@ -18,7 +18,6 @@ const SVGS = import.meta.glob<string>('./figures/*.svg', { query: '?raw', import
 const LOADS: SimConfig['load'][] = ['R', 'RL', 'RLE']
 const SOURCE_ANCHORS: Record<string, string[]> = {
   '1ph-half-wave': ['vs'],
-  '1ph-centre-tap': ['vs1', 'vs2'],
   '1ph-bridge': ['vs'],
   '3ph-half-wave': ['va', 'vb', 'vc'],
   '3ph-bridge': ['va', 'vb', 'vc'],

@@ -1,6 +1,5 @@
 export type TopologyId =
   | '1ph-half-wave'
-  | '1ph-centre-tap'
   | '1ph-bridge'
   | '3ph-half-wave'
   | '3ph-bridge'
@@ -37,20 +36,24 @@ export interface Topology {
   supportsFWD: boolean
   /** Half-controlled bridge only makes sense where both groups are switched. */
   supportsSemi: boolean
-  /**
-   * How long a gate pulse train is held after firing, equal to the conduction
-   * span of the equivalent diode. This is what lets a thyristor re-conduct
-   * within its own interval under discontinuous conduction.
-   */
+  /** Conduction span of the equivalent diode, which bounds the gate pulse train. */
   gateWindow: number
   /**
-   * Number of distinct source nodes. The centre-tapped transformer presents two
-   * antiphase secondaries, so it has two source nodes but only one supply phase.
+   * Where the gate pulse train stops. 'interval' ends it with the half-cycle
+   * in which the device's supply is positive, which is the range Hart's α
+   * refers to; held any longer, a negative back-EMF would let the thyristor
+   * re-fire early in the next cycle and every α would act like zero.
+   * 'delayed' holds it for a full gateWindow after firing, because a
+   * three-phase thyristor may be fired past the end of its natural interval
+   * and, in the six-pulse bridge, must be re-gated when its partner in the
+   * next pair fires.
    */
+  gateEnd: 'interval' | 'delayed'
+  /** Number of distinct source nodes, counting the neutral. */
   sourceNodes: number
   /**
    * Node index clamped to the negative rail for topologies with no switched
-   * lower group (the supply neutral or transformer centre tap), else null.
+   * lower group (the supply neutral), else null.
    */
   returnNode: number | null
   /** True when the lower group is a single fixed return node rather than switched devices. */

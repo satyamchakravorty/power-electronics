@@ -127,7 +127,7 @@ export function ShortcutHints() {
         hold <kbd>Shift</kbd> for 10° steps
       </span>
       <span>
-        <kbd>1</kbd>–<kbd>5</kbd> switch converter
+        <kbd>1</kbd>–<kbd>4</kbd> switch converter
       </span>
     </p>
   )

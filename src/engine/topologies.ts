@@ -4,9 +4,9 @@ const DEG = Math.PI / 180
 
 /**
  * Source node voltages for a topology, in volts, at electrical angle theta.
- * Index 0 is always the reference phase. Nodes held at zero are the neutral or
- * transformer centre tap, which the solver uses as the negative rail when a
- * topology has no switched lower group.
+ * Index 0 is always the reference phase. A node held at zero is the supply
+ * neutral, which the solver uses as the negative rail when a topology has no
+ * switched lower group.
  */
 export function sourceVoltages(topology: Topology, theta: number, Vm: number): number[] {
   const out = new Array<number>(topology.sourceNodes)
@@ -27,11 +27,6 @@ export function writeSourceVoltages(
     case '1ph-bridge':
       out[0] = v
       out[1] = 0
-      break
-    case '1ph-centre-tap':
-      out[0] = v
-      out[1] = -v
-      out[2] = 0
       break
     case '3ph-half-wave':
     case '3ph-bridge':
@@ -73,27 +68,8 @@ export const TOPOLOGIES: Record<TopologyId, Topology> = {
     supportsFWD: true,
     supportsSemi: false,
     gateWindow: Math.PI,
+    gateEnd: 'interval',
     devices: [dev('T1', 'upper', 0, 0, +1)],
-  },
-
-  '1ph-centre-tap': {
-    id: '1ph-centre-tap',
-    name: 'Single-Phase Centre-Tapped Full-Wave',
-    shortName: '1Φ Centre-Tap',
-    phases: 1,
-    pulses: 2,
-    sourceNodes: 3,
-    returnNode: 2,
-    commonReturn: true,
-    supportsFWD: true,
-    supportsSemi: false,
-    gateWindow: Math.PI,
-    devices: [
-      dev('T1', 'upper', 0, 0, +1),
-      // Fed from the antiphase secondary, so its load current reflects to the
-      // primary with the opposite sign.
-      dev('T2', 'upper', 1, Math.PI, -1),
-    ],
   },
 
   '1ph-bridge': {
@@ -108,6 +84,7 @@ export const TOPOLOGIES: Record<TopologyId, Topology> = {
     supportsFWD: true,
     supportsSemi: true,
     gateWindow: Math.PI,
+    gateEnd: 'interval',
     devices: [
       dev('T1', 'upper', 0, 0, +1),
       dev('T2', 'lower', 1, 0, 0),
@@ -128,6 +105,7 @@ export const TOPOLOGIES: Record<TopologyId, Topology> = {
     supportsFWD: true,
     supportsSemi: false,
     gateWindow: (2 * Math.PI) / 3,
+    gateEnd: 'delayed',
     devices: [
       dev('T1', 'upper', 0, 30 * DEG, +1),
       dev('T2', 'upper', 1, 150 * DEG, 0),
@@ -147,6 +125,7 @@ export const TOPOLOGIES: Record<TopologyId, Topology> = {
     supportsFWD: true,
     supportsSemi: true,
     gateWindow: (2 * Math.PI) / 3,
+    gateEnd: 'delayed',
     // Conventional firing order T1..T6 at 60 degree intervals.
     devices: [
       dev('T1', 'upper', 0, 30 * DEG, +1),
@@ -161,7 +140,6 @@ export const TOPOLOGIES: Record<TopologyId, Topology> = {
 
 export const TOPOLOGY_ORDER: TopologyId[] = [
   '1ph-half-wave',
-  '1ph-centre-tap',
   '1ph-bridge',
   '3ph-half-wave',
   '3ph-bridge',

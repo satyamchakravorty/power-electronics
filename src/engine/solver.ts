@@ -26,14 +26,14 @@ function wrap(x: number): number {
 }
 
 /**
- * Gate pulses are modelled as a train held for the span an equivalent diode
- * would conduct, which is what lets a thyristor re-strike inside its own
- * interval once the load current has extinguished.
+ * Gate pulses are modelled as a train rather than a single pulse, so a
+ * thyristor gated before it is forward-biased (α below Hart's α_min against a
+ * back-EMF) fires the moment it becomes forward-biased, and one whose current
+ * has extinguished can re-strike while its train lasts.
  */
-function gateActive(device: DeviceSpec, theta: number, alpha: number, window: number): boolean {
-  // The tolerance stops rounding from pushing a firing instant that lands
-  // exactly on a step to the step after, which made phases fire unevenly.
-  return wrap(theta - (device.naturalFireAngle + alpha) + 1e-9) < window
+function gateActive(topology: Topology, device: DeviceSpec, theta: number, alpha: number): boolean {
+  const window = topology.gateEnd === 'interval' ? topology.gateWindow - alpha : topology.gateWindow
+  return wrap(theta - (device.naturalFireAngle + alpha)) < window
 }
 
 /** Whether a gate pulse is being applied to this device at the given angle. */
@@ -44,7 +44,7 @@ export function isGated(
   theta: number,
 ): boolean {
   if (!isThyristor(device, config.deviceMode)) return false
-  return gateActive(device, theta, config.alphaDeg * DEG, topology.gateWindow)
+  return gateActive(topology, device, theta, config.alphaDeg * DEG)
 }
 
 /** Conduction carried from one integration step to the next. */
@@ -95,7 +95,7 @@ function decide(
     if (
       !latched &&
       isThyristor(d, config.deviceMode) &&
-      !gateActive(d, theta, alpha, topology.gateWindow)
+      !gateActive(topology, d, theta, alpha)
     ) {
       continue
     }
@@ -106,12 +106,12 @@ function decide(
     }
   }
 
-  const blocked = () => {
-    // With nothing conducting the output terminals float at the load EMF. The
-    // rails distribute themselves so every device sees reverse bias.
+  // With no bridge device conducting, the output terminals sit at `vo` and the
+  // rails distribute themselves so every device sees reverse bias.
+  const float = (vo: number) => {
     if (topology.returnNode !== null) {
       out.vMinus = vNodes[topology.returnNode]
-      out.vPlus = out.vMinus + E
+      out.vPlus = out.vMinus + vo
     } else {
       let hi = -Infinity
       let lo = Infinity
@@ -119,19 +119,34 @@ function decide(
         if (vNodes[d.phase] > hi) hi = vNodes[d.phase]
         if (vNodes[d.phase] < lo) lo = vNodes[d.phase]
       }
-      const slack = (E - (hi - lo)) / 2
+      const slack = (vo - (hi - lo)) / 2
       out.vPlus = hi + slack
       out.vMinus = lo - slack
     }
-    out.vo = E
+    out.vo = vo
     out.upper = null
     out.lower = null
+  }
+  const blocked = () => {
+    float(E)
     out.freewheeling = false
     out.blocking = true
   }
+  const freewheel = (rail?: number) => {
+    float(0)
+    if (rail !== undefined) {
+      out.vPlus = rail
+      out.vMinus = rail
+    }
+    out.freewheeling = true
+    out.blocking = false
+  }
 
   if (!upper || (lowerGroupExists && !lower)) {
-    blocked()
+    // A lone thyristor whose gate pulse has ended still leaves the load current
+    // a path through the freewheeling diode.
+    if (config.fwd && state.current > I_EPS) freewheel()
+    else blocked()
     return
   }
 
@@ -142,13 +157,7 @@ function decide(
     // An established current keeps flowing; a freewheeling diode takes it over
     // the moment the bridge tries to push the output voltage negative.
     if (config.fwd && vo < 0) {
-      out.vo = 0
-      out.upper = null
-      out.lower = null
-      out.freewheeling = true
-      out.blocking = false
-      out.vPlus = vMinusNode
-      out.vMinus = vMinusNode
+      freewheel(vMinusNode)
       return
     }
   } else if (vo <= E) {
@@ -164,6 +173,86 @@ function decide(
   out.blocking = false
   out.vPlus = vNodes[upper.phase]
   out.vMinus = vMinusNode
+}
+
+const REST: SwitchState = { current: 0, upperOn: null, lowerOn: null }
+
+interface Probe {
+  start: SwitchState
+  /** Current one cycle later minus the current the cycle started with. */
+  gap: number
+}
+
+/**
+ * Finds the periodic steady state directly rather than integrating through the
+ * start-up transient, which can run to hundreds of cycles for a stiff inductor.
+ *
+ * The cycle map from the current at the start of a cycle to the current one
+ * cycle later is piecewise affine. Its slope is the R-L decay over one cycle
+ * while current flows throughout and zero wherever the current has to restart
+ * from rest, so the gap between the two falls strictly as the starting current
+ * rises. The fixed point is therefore bracketed, and secant steps inside the
+ * bracket converge on it whichever conduction mode it sits in. An unguarded
+ * Newton step built on the continuous-conduction slope overshoots by up to
+ * L/R cycles in discontinuous conduction and never settles.
+ */
+function periodicState(
+  runCycle: (start: SwitchState, sink: null) => SwitchState,
+  decay: number,
+): SwitchState {
+  // The devices conducting at the end of a cycle are the ones carrying the
+  // current into the next, so every trial starts from the latest such set.
+  let carry = REST
+  const probe = (current: number): Probe => {
+    const start = { ...carry, current }
+    const ended = runCycle(start, null)
+    if (ended.current > I_EPS) carry = ended
+    return { start, gap: ended.current - current }
+  }
+  const tolerance = (current: number) => 1e-10 * Math.max(1, current)
+
+  // The continuous-conduction slope is the shallowest the gap can fall at, so
+  // a step built on it from below lands on or beyond the fixed point.
+  const shallowest = Math.max(1 - decay, 1e-9)
+
+  const first = probe(0)
+  if (first.gap <= tolerance(0)) return first.start
+  let best = first
+  let low = 0
+  let lowGap = first.gap
+  let high = Infinity
+  let highGap = 0
+  // Which end moved last, for the Illinois correction that stops a stale end
+  // of the bracket from slowing the secant steps to a crawl.
+  let side = 0
+  let next = first.gap / shallowest
+
+  for (let iter = 0; iter < 60; iter++) {
+    if (high < Infinity && !(next > low && next < high)) next = (low + high) / 2
+    const trial = probe(next)
+    if (Math.abs(trial.gap) < Math.abs(best.gap)) best = trial
+    if (Math.abs(trial.gap) <= tolerance(next)) return trial.start
+
+    if (trial.gap > 0) {
+      low = next
+      lowGap = trial.gap
+      if (side === 1) highGap /= 2
+      side = 1
+    } else {
+      high = next
+      highGap = trial.gap
+      if (side === -1) lowGap /= 2
+      side = -1
+    }
+
+    if (high === Infinity) {
+      next = low + lowGap / shallowest
+      continue
+    }
+    if (high - low <= tolerance(high)) break
+    next = low + (lowGap * (high - low)) / (lowGap - highGap)
+  }
+  return best.start
 }
 
 function rk4(i: number, vo: number, R: number, E: number, L: number, dt: number): number {
@@ -202,6 +291,7 @@ export function simulate(config: SimConfig): Trace {
   const refUpper = refDevice.group === 'upper'
 
   const vNodes = new Array<number>(topology.sourceNodes).fill(0)
+  const sampleNodes = new Array<number>(topology.sourceNodes).fill(0)
   const dec: Decision = {
     vo: 0,
     upper: null,
@@ -228,7 +318,10 @@ export function simulate(config: SimConfig): Trace {
       const perDevice = sink ? topology.devices.map(() => 0) : null
 
       for (let s = 0; s < M; s++) {
-        const th = (k * M + s) * dTheta
+        // Each step is judged and driven at its midpoint. Holding the
+        // start-of-step voltage instead biases the mean by a step's share of
+        // every commutation jump, which is what limits accuracy here.
+        const th = (k * M + s + 0.5) * dTheta
         writeSourceVoltages(topology, th, Vm, vNodes)
 
         // A purely resistive load has no state, so the current follows the
@@ -282,9 +375,10 @@ export function simulate(config: SimConfig): Trace {
               freewheeling: dec.freewheeling,
               blocking: dec.blocking,
             }
-            sink.theta[k] = th
-            sink.t[k] = (k * M * dt)
-            for (let n = 0; n < topology.sourceNodes; n++) sink.vSource[n][k] = vNodes[n]
+            sink.theta[k] = k * M * dTheta
+            sink.t[k] = k * M * dt
+            writeSourceVoltages(topology, sink.theta[k], Vm, sampleNodes)
+            for (let n = 0; n < topology.sourceNodes; n++) sink.vSource[n][k] = sampleNodes[n]
           }
         }
 
@@ -312,37 +406,7 @@ export function simulate(config: SimConfig): Trace {
     return state
   }
 
-  // Rather than integrating through the whole start-up transient, which can run
-  // to hundreds of cycles for a stiff inductor, solve for the periodic steady
-  // state directly. The load is linear, so the map from the current at the
-  // start of a cycle to the current one cycle later is affine with a known
-  // slope, and a secant step on that map lands on the fixed point immediately.
-  let state: SwitchState = { current: 0, upperOn: null, lowerOn: null }
-  if (L > 0) {
-    const decay = Math.exp(-R / (config.f * L))
-    const gain = 1 / Math.max(1 - decay, 1e-6)
-    let best = state
-    let bestError = Infinity
-    for (let iter = 0; iter < 40; iter++) {
-      const ended = runCycle(state, null)
-      const error = ended.current - state.current
-      if (Math.abs(error) < bestError) {
-        bestError = Math.abs(error)
-        best = state
-      }
-      if (Math.abs(error) <= 1e-10 * Math.max(1, Math.abs(state.current))) break
-      // Damp once the undamped Newton step stops making progress, which can
-      // happen right at the boundary between continuous and discontinuous
-      // conduction where the cycle map has a kink.
-      const damping = iter < 12 ? 1 : 0.4
-      state = {
-        current: Math.max(0, state.current + error * gain * damping),
-        upperOn: ended.upperOn,
-        lowerOn: ended.lowerOn,
-      }
-    }
-    state = best
-  }
+  const state = L > 0 ? periodicState(runCycle, Math.exp(-R / (config.f * L))) : REST
 
   const sink: Sink = {
     theta: new Float64Array(N),

@@ -176,63 +176,6 @@ describe('Hart chapter 4: single-phase full-wave', () => {
   })
 })
 
-/**
- * Hart works no centre-tap example, but states that the bridge analysis
- * "generally applies to the center-tapped circuit as well" (Sec. 4.2, and again
- * for SCRs in Sec. 4.3), and lists how the two differ. These hold the
- * simulator to each of those statements, plus the centre-tap end-of-chapter
- * problems, which the book leaves unanswered and are worked here from its
- * equations.
- */
-describe('Hart chapter 4: centre-tapped rectifier', () => {
-  const mean = (data: Float64Array) => data.reduce((sum, v) => sum + v, 0) / data.length
-
-  it('peak reverse voltage is Vm for a bridge and 2Vm for a centre-tap (Problem 4-2)', () => {
-    const Vm = 120 * SQRT2
-    const bridge = run({ topology: '1ph-bridge', deviceMode: 'diode', load: 'R', Vrms: 120, R: 25 })
-    const tap = run({ topology: '1ph-centre-tap', deviceMode: 'diode', load: 'R', Vrms: 120, R: 25 })
-    // Io = 2Vm/(pi R) for both, Eq. (4-2).
-    near(bridge.m.idc, (2 * Vm) / (Math.PI * 25))
-    near(tap.m.idc, (2 * Vm) / (Math.PI * 25))
-    near(bridge.m.piv, Vm)
-    near(tap.m.piv, 2 * Vm)
-  })
-
-  it('Problem 4-7: 40 V per half winding into 4 Ω', () => {
-    const { trace, m } = run({ topology: '1ph-centre-tap', deviceMode: 'diode', load: 'R', Vrms: 40, R: 4 })
-    near(m.idc, (2 * 40 * SQRT2) / (Math.PI * 4))
-    near(m.irms, 10)
-    // Observation 4 in Sec. 4.2: the half-winding currents cancel at the source.
-    expect(Math.abs(mean(trace.isSource))).toBeLessThan(1e-6)
-    // The simulator refers source current to one half winding; the 240 V
-    // primary of the problem sees it scaled by 40/240.
-    near(m.isRms * (40 / 240), 10 / 6)
-  })
-
-  it('a controlled centre-tap reproduces the bridge results of Examples 4-6 and 4-8', () => {
-    const r = run({ topology: '1ph-centre-tap', deviceMode: 'thyristor', load: 'R', Vrms: 120, R: 20, alphaDeg: 40 })
-    near(r.m.vdc, 95.4)
-    near(r.m.idc, 4.77)
-    near(r.m.irms, 5.8)
-    near(r.m.pLoad, 673)
-
-    const rl = run({ topology: '1ph-centre-tap', deviceMode: 'thyristor', load: 'RL', Vrms: 120, R: 10, L: 100, alphaDeg: 60 })
-    expect(rl.m.discontinuous).toBe(false)
-    near(rl.m.vdc, 54.0)
-    near(rl.m.idc, 5.4)
-    near(rl.m.irms, 5.54)
-    near(rl.m.pLoad, 307)
-  })
-
-  it('a controlled centre-tap goes discontinuous exactly like Example 4-7', () => {
-    const { trace, m } = run({ topology: '1ph-centre-tap', deviceMode: 'thyristor', load: 'RL', Vrms: 120, R: 10, L: 20, alphaDeg: 60 })
-    expect(m.discontinuous).toBe(true)
-    near(extinctionDeg(trace, 65), 216, 0.005)
-    near(m.idc, 7.05)
-    near(m.irms, 8.35)
-  })
-})
-
 describe('Hart chapter 4: three-phase', () => {
   const phase = (lineToLine: number) => lineToLine / Math.sqrt(3)
 

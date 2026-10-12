@@ -125,7 +125,6 @@ function rectified(topology: TopologyId, theta: number): number {
   switch (topology) {
     case '1ph-half-wave':
       return Math.max(0, phase(0))
-    case '1ph-centre-tap':
     case '1ph-bridge':
       return Math.abs(phase(0))
     case '3ph-half-wave':
